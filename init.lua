@@ -3,11 +3,15 @@
 	An isolated, independent conversion of the Ethereal/Rootyjr fishing routine.
 ]]--
 
--- Global mod namespace initialization (replaces the old 'ethereal' global table)
-standalone_fishing = {}
+-- Dynamically fetch the current mod name to future-proof modpath registration
+local modname = core.get_current_modname() or "standalone_fishing"
+
+-- Global mod namespace initialization
+_G[modname] = _G[modname] or {}
+local mod_ns = _G[modname]
 
 -- Safe translation domain fallback
-local S = core.get_translator and core.get_translator("standalone_fishing") or function(str) return str end
+local S = core.get_translator and core.get_translator(modname) or function(str) return str end
 
 -- Structural check variables for optional mods
 local mod_bonemeal = core.get_modpath("bonemeal")
@@ -26,40 +30,40 @@ local bottle_item = mod_vessels and "vessels:glass_bottle" or "default:glass"
 local lily_item   = mod_flowers and "flowers:waterlily" or "default:papyrus"
 local paper_item  = core.registered_items["default:paper"] and "default:paper" or "default:book"
 
--- Complete fish pool table (Maintained all entries, stripped Ethereal biomes to clear safe default drops)
+-- Complete fish pool table (Maintained all entries, using dynamic namespace prefix)
 local fish_items = {
-	"standalone_fishing:fish_bluefin",
-	"standalone_fishing:fish_blueram",
-	"standalone_fishing:fish_catfish",
-	"standalone_fishing:fish_plaice",
-	"standalone_fishing:fish_salmon",
-	"standalone_fishing:fish_clownfish",
-	"standalone_fishing:fish_pike",
-	"standalone_fishing:fish_flathead",
-	"standalone_fishing:fish_pufferfish",
-	"standalone_fishing:fish_cichlid",
-	"standalone_fishing:fish_coy",
-	"standalone_fishing:fish_tilapia",
-	"standalone_fishing:fish_trevally",
-	"standalone_fishing:fish_angler",
-	"standalone_fishing:fish_jellyfish",
-	"standalone_fishing:fish_seahorse",
-	"standalone_fishing:fish_seahorse_green",
-	"standalone_fishing:fish_seahorse_pink",
-	"standalone_fishing:fish_seahorse_blue",
-	"standalone_fishing:fish_seahorse_yellow",
-	"standalone_fishing:fish_parrot",
-	"standalone_fishing:fish_piranha",
-	"standalone_fishing:fish_tuna",
-	"standalone_fishing:fish_trout",
-	"standalone_fishing:fish_cod",
-	"standalone_fishing:fish_flounder",
-	"standalone_fishing:fish_redsnapper",
-	"standalone_fishing:fish_squid",
-	"standalone_fishing:fish_shrimp",
-	"standalone_fishing:fish_carp",
-	"standalone_fishing:fish_tetra",
-	"standalone_fishing:fish_mackerel"
+	modname .. ":fish_bluefin",
+	modname .. ":fish_blueram",
+	modname .. ":fish_catfish",
+	modname .. ":fish_plaice",
+	modname .. ":fish_salmon",
+	modname .. ":fish_clownfish",
+	modname .. ":fish_pike",
+	modname .. ":fish_flathead",
+	modname .. ":fish_pufferfish",
+	modname .. ":fish_cichlid",
+	modname .. ":fish_coy",
+	modname .. ":fish_tilapia",
+	modname .. ":fish_trevally",
+	modname .. ":fish_angler",
+	modname .. ":fish_jellyfish",
+	modname .. ":fish_seahorse",
+	modname .. ":fish_seahorse_green",
+	modname .. ":fish_seahorse_pink",
+	modname .. ":fish_seahorse_blue",
+	modname .. ":fish_seahorse_yellow",
+	modname .. ":fish_parrot",
+	modname .. ":fish_piranha",
+	modname .. ":fish_tuna",
+	modname .. ":fish_trout",
+	modname .. ":fish_cod",
+	modname .. ":fish_flounder",
+	modname .. ":fish_redsnapper",
+	modname .. ":fish_squid",
+	modname .. ":fish_shrimp",
+	modname .. ":fish_carp",
+	modname .. ":fish_tetra",
+	modname .. ":fish_mackerel"
 }
 
 -- Complete junk items table with fallbacks
@@ -86,21 +90,21 @@ local bonus_items = {
 	mod_tnt and "tnt:tnt_stick" or "default:coal_lump",
 	mod_bucket and "bucket:bucket_empty" or "default:iron_lump",
 	"default:sword_steel 12000",
-	"standalone_fishing:fishing_rod 9000"
+	modname .. ":fishing_rod 9000"
 }
 
 local default_item = "default:dirt"
 local random = math.random
 
 -- RETAINED FUNCTION: Global item injection registration access point
-function standalone_fishing.add_item(fish, junk, bonus)
-	if fish and fish ~= "" then table.insert(fish_items, fish) end
+function mod_ns.add_item(fish_item, junk, bonus)
+	if fish_item and fish_item ~= "" then table.insert(fish_items, fish_item) end
 	if junk and junk ~= "" then table.insert(junk_items, junk) end
 	if bonus and bonus ~= "" then table.insert(bonus_items, bonus) end
 end
 
 -- RETAINED FUNCTION: Standalone dummy implementation for tracking eatables across mods
-function standalone_fishing.add_eatable(item, hp)
+function mod_ns.add_eatable(item, hp)
 	-- Hook footprint kept active to mimic Ethereal registration functions cleanly
 end
 
@@ -126,7 +130,7 @@ end
 -- Bobber entity engine implementation
 local get_node = core.get_node
 
-core.register_entity("standalone_fishing:bob_entity", {
+core.register_entity(modname .. ":bob_entity", {
 
 	initial_properties = {
 		textures = {"standalone_fishing_bob.png"},
@@ -170,8 +174,8 @@ core.register_entity("standalone_fishing:bob_entity", {
 				if inv and inv:contains_item("main", "caverealms:glow_bait") then
 					inv:remove_item("main", "caverealms:glow_bait")
 					bait = 40
-				elseif inv and inv:contains_item("main", "standalone_fishing:worm") then
-					inv:remove_item("main", "standalone_fishing:worm")
+				elseif inv and inv:contains_item("main", modname .. ":worm") then
+					inv:remove_item("main", modname .. ":worm")
 					bait = 20
 				end
 
@@ -201,7 +205,7 @@ core.register_entity("standalone_fishing:bob_entity", {
 			end
 
 			local wield = player:get_wielded_item()
-			if not wield or wield:get_name() ~= "standalone_fishing:fishing_rod" then
+			if not wield or wield:get_name() ~= modname .. ":fishing_rod" then
 				self.object:remove()
 				return
 			end
@@ -290,7 +294,7 @@ local function use_rod(itemstack, player, pointed_thing)
 	for n = 1, #objs do
 		local ent = objs[n]:get_luaentity()
 
-		if ent and ent.fisher and ent.name == "standalone_fishing:bob_entity"
+		if ent and ent.fisher and ent.name == modname .. ":bob_entity"
 		and ent.fisher == player:get_player_name() then
 
 			if ent.bob then
@@ -342,7 +346,7 @@ local function use_rod(itemstack, player, pointed_thing)
 	-- Safely falls back to default placement sound profiles if custom wave files aren't found
 	core.sound_play("default_place_node", {pos = cast_pos, max_hear_distance = 10}, true)
 
-	local obj = core.add_entity(cast_pos, "standalone_fishing:bob_entity")
+	local obj = core.add_entity(cast_pos, modname .. ":bob_entity")
 	if obj then
 		obj:set_velocity({x = dir.x * 8, y = dir.y * 8, z = dir.z * 8})
 		obj:set_acceleration({x = dir.x * -3, y = -9.8, z = dir.z * -3})
@@ -359,7 +363,7 @@ local function remove_bob(player)
 	local name = player:get_player_name()
 	for n = 1, #objs do
 		local ent = objs[n]:get_luaentity()
-		if ent and ent.name == "standalone_fishing:bob_entity" then
+		if ent and ent.name == modname .. ":bob_entity" then
 			if ent.fisher and ent.fisher == name then
 				ent.object:remove()
 			end
@@ -371,7 +375,7 @@ core.register_on_leaveplayer(function(player) remove_bob(player) end)
 core.register_on_dieplayer(function(player) remove_bob(player) end)
 
 -- Fishing Rod Tool Registration
-core.register_tool("standalone_fishing:fishing_rod", {
+core.register_tool(modname .. ":fishing_rod", {
 	description = S("Fishing Rod (USE to cast and again when the time is right)"),
 	groups = {tool = 1},
 	inventory_image = "standalone_fishing_rod.png",
@@ -383,7 +387,7 @@ core.register_tool("standalone_fishing:fishing_rod", {
 })
 
 core.register_craft({
-	output = "standalone_fishing:fishing_rod",
+	output = modname .. ":fishing_rod",
 	recipe = {
 		{"","","group:stick"},
 		{"","group:stick", string_item},
@@ -393,7 +397,7 @@ core.register_craft({
 
 core.register_craft({
 	type = "fuel",
-	recipe = "standalone_fishing:fishing_rod",
+	recipe = modname .. ":fishing_rod",
 	burntime = 15
 })
 
@@ -443,37 +447,38 @@ for n = 1, #fish do
 		groups = {food_fish_raw = 1, standalone_fish = 1}
 	end
 
-	core.register_craftitem("standalone_fishing:fish_" .. fish[n][2], {
+	core.register_craftitem(modname .. ":fish_" .. fish[n][2], {
 		description = S(fish[n][1]),
-		inventory_image = "standalone_fish_" .. fish[n][2] .. ".png",
+		-- RETAINED: Keeps original "ethereal_" filename maps directly without text conversion overhead
+		inventory_image = "ethereal_fish_" .. fish[n][2] .. ".png",
 		on_use = usage,
 		groups = groups
 	})
 
-	if groups then
-		standalone_fishing.add_eatable("standalone_fishing:fish_" .. fish[n][2], fish[n][3])
+	if groups and mod_ns.add_eatable then
+		mod_ns.add_eatable(modname .. ":fish_" .. fish[n][2], fish[n][3])
 	end
 end
 
 -- Override modifications matching initial file properties
-core.override_item("standalone_fishing:fish_tetra", {light_source = 3})
-core.override_item("standalone_fishing:fish_pufferfish", {groups = {flammable = 2}})
+core.override_item(modname .. ":fish_tetra", {light_source = 3})
+core.override_item(modname .. ":fish_pufferfish", {groups = {flammable = 2}})
 
 -- Standalone Worm Item
-core.register_craftitem("standalone_fishing:worm", {
+core.register_craftitem(modname .. ":worm", {
 	description = S("Worm"),
 	inventory_image = "standalone_worm.png",
 	wield_image = "standalone_worm.png"
 })
 
 core.register_craft({
-	output = "standalone_fishing:worm",
+	output = modname .. ":worm",
 	recipe = {
 		{"default:dirt", "default:dirt"}
 	}
 })
 
 -- Universal mod compatibility alias mappings
-core.register_alias("standalone_fishing:fish_raw", "standalone_fishing:fish_cichlid")
-core.register_alias("standalone_fishing:fishing_rod_baited", "standalone_fishing:fishing_rod")
-core.register_alias("standalone_fishing:fish_chichlid", "standalone_fishing:fish_cichlid")
+core.register_alias(modname .. ":fish_raw", modname .. ":fish_cichlid")
+core.register_alias(modname .. ":fishing_rod_baited", modname .. ":fishing_rod")
+core.register_alias(modname .. ":fish_chichlid", modname .. ":fish_cichlid")
